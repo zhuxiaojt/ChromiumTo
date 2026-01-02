@@ -1,0 +1,5 @@
+appdirs
+pywin32
+pystray
+plyer
+Pillow
