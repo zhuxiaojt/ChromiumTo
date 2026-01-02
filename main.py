@@ -268,6 +268,7 @@ def showLogWindow():
     log_window.title("日志查看")
     log_window.geometry("800x600")
     log_window.resizable(True, True)
+    log_window.transient(root)
     log_window.config(bg='white')
     
     # 创建文本框用于显示日志
@@ -911,11 +912,16 @@ def clearBackups():
     backup_window.title("选择要清除的备份")
     backup_window.geometry("600x400")
     backup_window.transient(root)
+    backup_window.config(bg="white")
     backup_window.grab_set()
+    
+    # 创建主框架，用于管理Treeview和滚动条
+    tree_frame = ttk.Frame(backup_window)
+    tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
     
     # 创建Treeview显示备份列表
     columns = ("app_name", "path", "size")
-    backup_tree = ttk.Treeview(backup_window, columns=columns, show="headings", selectmode='extended')
+    backup_tree = ttk.Treeview(tree_frame, columns=columns, show="headings", selectmode='extended')
     backup_tree.heading("app_name", text="应用名称")
     backup_tree.heading("path", text="备份路径")
     backup_tree.heading("size", text="大小")
@@ -923,11 +929,11 @@ def clearBackups():
     backup_tree.column("path", width=350)
     backup_tree.column("size", width=100, anchor=tk.CENTER)
     
-    scrollbar = ttk.Scrollbar(backup_window, orient=tk.VERTICAL, command=backup_tree.yview)
+    scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=backup_tree.yview)
     backup_tree.configure(yscroll=scrollbar.set)
     
-    backup_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+    backup_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
     
     # 添加备份到Treeview
     for backup in backup_dirs:
@@ -937,8 +943,8 @@ def clearBackups():
             formatFileSize(backup['size'])
         ))
     
-    def deleteSelectedBackups():
-        """删除选中的备份"""
+    def clearSelectedBackups():
+        """清除选中的备份"""
         selected_items = backup_tree.selection()
         if not selected_items:
             writeLog("请选择要删除的备份", level="WARNING")
@@ -967,10 +973,22 @@ def clearBackups():
             else:
                 fail_count += 1
         
-        writeLog(f"备份删除完成：成功 {success_count} 个，失败 {fail_count} 个")
+        # 生成结果消息
+        result_message = f"备份删除完成：成功 {success_count} 个，失败 {fail_count} 个"
+        writeLog(result_message)
+        
+        # 显示结果提示
+        messagebox.showinfo("提示", result_message)
+        
+        # 更新状态栏
+        updateStatus(result_message)
+        
+        # 如果没有更多备份，关闭窗口
+        if not backup_tree.get_children():
+            backup_window.destroy()
     
-    def deleteAllBackupsConfirm():
-        """删除所有备份"""
+    def clearAllBackupsConfirm():
+        """清除所有备份"""
         # 确认删除
         if not messagebox.askyesno("警告", "确定要删除所有备份吗？此操作不可恢复！"):
             return
@@ -982,15 +1000,25 @@ def clearBackups():
         success_count = sum(1 for r in results if r['success'])
         fail_count = sum(1 for r in results if not r['success'])
         
-        writeLog(f"所有备份删除完成：成功 {success_count} 个，失败 {fail_count} 个")
+        # 生成结果消息
+        result_message = f"所有备份删除完成：成功 {success_count} 个，失败 {fail_count} 个"
+        writeLog(result_message)
+        
+        # 显示结果提示
+        messagebox.showinfo("提示", result_message)
+        
+        # 更新状态栏
+        updateStatus(result_message)
+        
+        # 关闭窗口
         backup_window.destroy()
     
-    # 按钮区域
+    # 按钮区域 - 始终显示在窗口底部
     button_frame = ttk.Frame(backup_window)
-    button_frame.pack(fill=tk.X, padx=10, pady=10)
+    button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
     
-    ttk.Button(button_frame, text="删除选中", command=deleteSelectedBackups).pack(side=tk.LEFT, padx=5)
-    ttk.Button(button_frame, text="删除全部", command=deleteAllBackupsConfirm).pack(side=tk.LEFT, padx=5)
+    ttk.Button(button_frame, text="清除选中", command=clearSelectedBackups).pack(side=tk.LEFT, padx=5)
+    ttk.Button(button_frame, text="清除全部", command=clearAllBackupsConfirm).pack(side=tk.LEFT, padx=5)
     ttk.Button(button_frame, text="取消", command=backup_window.destroy).pack(side=tk.RIGHT, padx=5)
 
 if __name__ == "__main__":

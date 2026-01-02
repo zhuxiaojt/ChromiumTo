@@ -15,8 +15,6 @@ default_config = {
         'Windows',
         '$Recycle.Bin',
         'System Volume Information',
-        'Program Files',
-        'Program Files (x86)',
         'AppData\\Local\\Temp'
     ]
 }
@@ -36,6 +34,12 @@ def loadConfig():
                 for key, value in default_config.items():
                     if key not in config:
                         config[key] = value
+                    elif key == 'scan_exclusions':
+                        # 确保排除列表不包含Program Files目录
+                        # 首先获取默认排除列表
+                        default_exclusions = default_config['scan_exclusions']
+                        # 创建新的排除列表，只包含默认排除列表中的项目
+                        config['scan_exclusions'] = default_exclusions
                 return config
         except Exception:
             return default_config.copy()
