@@ -1,3 +1,15 @@
+[官方网站](https://zhuxiaojt.github.io/chromiumto)
+
+## 关于本仓库
+
+本仓库是ChromiumTo的开源仓库，里面包含了ChromiumTo的源代码，使用Python编写。
+
+由于代码使用了大量AI进行编写，所以你可能会看到一些莫名其妙的注释，请忽略它。
+
+我们不建议普通人查看本项目的源码，而是直接在本仓库的Release或官网上下载正式版。
+
+## Chromium介绍
+
 ChromiumTo是一款专为Chromium内核浏览器打造的共享工具，能够让您设备上的多个Chromium内核应用（如各类基于Chromium开发的浏览器）共享同一个内核文件，无需重复占用磁盘空间，同时实现内核版本的统一管理，一次更新即可覆盖所有关联应用。
 
 ## 核心优势
