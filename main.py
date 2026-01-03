@@ -21,7 +21,7 @@ import pystray
 import sys
 
 # 当前版本
-CURRENT_VERSION = [1, 1, 1]
+CURRENT_VERSION = [1, 1, 2]
 
 # 版本检查URL
 VERSION_CHECK_URL = 'https://zhuxiaojt.github.io/api/chromiumto/last_version.json'
@@ -92,6 +92,8 @@ def checkVersion():
     finally:
         # 更新UI
         updateVersionLabel()
+        # 1分钟后重新检查版本
+        root.after(60000,lambda: threading.Thread(target=checkVersion, daemon=True).start())
 
 # 更新版本标签
 def updateVersionLabel():

@@ -269,6 +269,20 @@
         .about-item p {
             color: #888;
         }
+
+        .iflast a{
+            color: #667eea;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .iflast a:hover{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
         
         /* 响应式设计 */
         @media (max-width: 768px) {
@@ -449,30 +463,36 @@
                     
                     <div class="about-item">
                         <h4>版本</h4>
-                        <p>1.1.0</p>
+                        <p>1.1.2</p>
                     </div>
+                </div>
+                <div class="iflast" id="iflast" style="display: flex;justify-content: center;">
+                    <p>正在检查版本信息...</p>
                 </div>
             </section>
         </main>
-        
         <footer>
             <p>&copy; 2026 ChromiumTo. All rights reserved.</p>
         </footer>
     </div>
     <script>
+        // 获取所有导航链接和对应章节
         const navLinks = document.querySelectorAll('.nav-menu a');
         const sections = document.querySelectorAll('section[id]');
 
+        // 滚动监听，更新导航激活态
         window.addEventListener('scroll', () => {
             let currentSection = '';
             sections.forEach(section => {
                 const sectionTop = section.offsetTop;
                 const sectionHeight = section.clientHeight;
-                if (window.scrollY >= (sectionTop - 80)) {
+                // 考虑顶部导航高度（60px），精准判断当前可视章节
+                if (window.scrollY >= (sectionTop - 70)) {
                     currentSection = section.getAttribute('id');
                 }
             });
 
+            // 更新导航链接高亮
             navLinks.forEach(link => {
                 link.classList.remove('active');
                 if (link.getAttribute('href').slice(1) === currentSection) {
@@ -480,6 +500,83 @@
                 }
             });
         });
+    </script>
+    <script>
+        function CheckVersionNow() {
+            // 1. 硬编码本地版本VList（请根据你的实际本地版本修改此数组）
+            const localVList = [1, 1, 2]; // 示例本地版本，可自行调整
+
+            // 2. 获取页面中id为iflast的div元素
+            const iflastDiv = document.getElementById('iflast');
+
+            // 3. 版本比较函数：判断远程VList是否是新版本
+            function isNewVersion(remoteVList, localVList) {
+                // 按主版本、次版本、修订版本依次比较（从左到右优先级递减）
+                for (let i = 0; i < 3; i++) {
+                    // 远程版本号大于本地，说明是新版本
+                    if (remoteVList[i] > localVList[i]) {
+                        return true;
+                    }
+                    // 远程版本号小于本地，说明不是新版本
+                    if (remoteVList[i] < localVList[i]) {
+                        return false;
+                    }
+                    // 相等则继续比较下一个版本号
+                }
+                // 所有版本号都相等，无新版本
+                return false;
+            }
+
+            // 4. 配置请求超时时间（单位：毫秒，可自行调整）
+            const timeoutDuration = 5000; // 5秒超时
+
+            // 5. 构建超时Promise
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error('timeout'));
+                }, timeoutDuration);
+            });
+
+            // 6. 发起版本检测请求
+            const versionRequestPromise = fetch('https://zhuxiaojt.github.io/api/chromiumto/last_version.json')
+                .then(response => {
+                    // 检查HTTP请求是否成功（状态码200-299）
+                    if (!response.ok) {
+                        throw new Error('Request failed');
+                    }
+                    // 解析JSON数据
+                    return response.json();
+                });
+
+            // 7. 竞争Promise：处理请求或超时
+            Promise.race([versionRequestPromise, timeoutPromise])
+                .then(versionData => {
+                    // 获取远程版本VList和下载链接
+                    const remoteVList = versionData.VList;
+                    const downloadLink = versionData.download_link;
+
+                    // 比较版本号
+                    if (isNewVersion(remoteVList, localVList)) {
+                        // 有新版本：渲染下载提示
+                        if (downloadLink.startsWith('https://')) {
+                            iflastDiv.innerHTML = `<p>发现新版本，<a href="${downloadLink}">点击下载</a></p>`;
+                        } else {
+                            iflastDiv.innerHTML = `<p style="color:red;font-weight:bold;">你可能正在受到攻击！<p><p style="color:red;">下载链接可能已被修改，因为它不是一个安全的HTTPS链接</p>`;
+                        }   
+                    } else {
+                        // 无新版本：渲染最新版本提示
+                        iflastDiv.innerHTML = `<p>当前已是最新版本</p>`;
+                    }
+                })
+                .catch(error => {
+                    // 超时或其他错误：渲染红色提示
+                    iflastDiv.innerHTML = `<p style="color:red;">版本信息检查超时</p>`;
+                    // 可选：在控制台打印错误信息，便于调试
+                    console.error('版本检测失败：', error);
+                });
+        }
+        CheckVersionNow(); // 立即执行一次
+        setInterval(CheckVersionNow, 60000); // 1分钟后重新检查版本
     </script>
 </body>
 </html>
