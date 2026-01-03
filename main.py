@@ -1,8 +1,9 @@
 import tkinter as tk
 import os
 import ctypes
-from tkinter import ttk, messagebox, filedialog, PhotoImage
 import threading
+import requests
+from tkinter import ttk, messagebox, filedialog, PhotoImage
 from utils import getAppDataPath, calculateDirectorySize, calculateChromeFilesSize, formatFileSize
 from config import loadConfig, writeLog
 from scanner import scanSystem, quickScan
@@ -19,6 +20,19 @@ from PIL import Image
 import pystray
 import sys
 
+# 当前版本
+CURRENT_VERSION = [1, 1, 1]
+
+# 版本检查URL
+VERSION_CHECK_URL = 'https://zhuxiaojt.github.io/api/chromiumto/last_version.json'
+
+# 版本检查结果
+version_check_result = {
+    'is_new_version': False,
+    'message': '',
+    'checked': False
+}
+
 # 检查是否以管理员权限运行
 def isAdmin():
     """检查是否以管理员权限运行"""
@@ -26,6 +40,75 @@ def isAdmin():
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
+
+# 检查版本
+def checkVersion():
+    """检查是否有新版本"""
+    global version_check_result
+    
+    try:
+        # 设置超时时间，跳过SSL证书验证（解决证书验证失败问题）
+        response = requests.get(VERSION_CHECK_URL, timeout=5, verify=False)
+        response.raise_for_status()
+        
+        # 解析JSON数据
+        version_data = response.json()
+        remote_version = version_data.get('VList', [0, 0, 0])
+        
+        # 比较版本号
+        is_new = False
+        for i in range(3):
+            if remote_version[i] > CURRENT_VERSION[i]:
+                is_new = True
+                break
+            elif remote_version[i] < CURRENT_VERSION[i]:
+                break
+        
+        if is_new:
+            version_check_result = {
+                'is_new_version': True,
+                'message': '当前软件不是最新版本，打开“关于”界面查看详情',
+                'checked': True
+            }
+        else:
+            version_check_result = {
+                'is_new_version': False,
+                'message': '',
+                'checked': True
+            }
+        
+    except requests.exceptions.Timeout:
+        writeLog("版本检查超时", level="WARNING")
+        version_check_result['checked'] = True
+        version_check_result['message'] = '版本检查失败'
+    except requests.exceptions.RequestException as e:
+        writeLog(f"版本检查失败: {str(e)}", level="ERROR")
+        version_check_result['checked'] = True
+        version_check_result['message'] = '版本检查失败'
+    except Exception as e:
+        writeLog(f"版本检查异常: {str(e)}", level="ERROR")
+        version_check_result['checked'] = True
+        version_check_result['message'] = '版本检查失败'
+    finally:
+        # 更新UI
+        updateVersionLabel()
+
+# 更新版本标签
+def updateVersionLabel():
+    """更新版本标签"""
+    if 'version_label' in globals():
+        if version_check_result['is_new_version']:
+            version_label.config(
+                text=version_check_result['message'],
+                foreground='darkred',
+                font=('Arial', 9, 'bold')
+            )
+        else:
+            version_label.config(
+                text=version_check_result['message'],
+                foreground='black',
+                font=('Arial', 9)
+            )
 
 # 请求管理员权限重启
 def restartAsAdmin():
@@ -244,6 +327,11 @@ def initUI():
     ttk.Button(help_buttons, text="关于", command=lambda: openHelpPage("about.html")).pack(side=tk.RIGHT, padx=5)
     ttk.Button(help_buttons, text="查看日志", command=showLogWindow).pack(side=tk.RIGHT, padx=5)
     
+    # 版本信息标签
+    global version_label
+    version_label = ttk.Label(help_buttons, text="")
+    version_label.pack(side=tk.RIGHT, padx=5)
+    
     # 状态栏
     status_var = tk.StringVar()
     status_var.set("就绪")
@@ -252,6 +340,9 @@ def initUI():
     
     # 初始加载数据
     refreshAppList()
+    
+    # 启动版本检查线程
+    threading.Thread(target=checkVersion, daemon=True).start()
     
     # 绑定窗口关闭事件
     root.protocol("WM_DELETE_WINDOW", onClose)
